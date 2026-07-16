@@ -8,7 +8,7 @@ import XPBar from "@/components/XPBar";
 import XPToast from "@/components/XPToast";
 import LevelUpModal from "@/components/LevelUpModal";
 
-const XP_THRESHOLD = 100;
+const XP_THRESHOLD = 10; // TODO: restore to 100 before production
 
 const FRIENDLY_LOADING_MESSAGES = [
   "Max is thinking… 🤔",

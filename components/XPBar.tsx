@@ -13,7 +13,7 @@ const LEVEL_LABELS: Record<string, string> = {
   advanced: "🌳 Advanced",
 };
 
-export default function XPBar({ profile, xpThreshold = 100 }: XPBarProps) {
+export default function XPBar({ profile, xpThreshold = 10 }: XPBarProps) { // TODO: restore to 100 before production
   const xpPercent = Math.min((profile.xp / xpThreshold) * 100, 100);
 
   return (
