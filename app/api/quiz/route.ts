@@ -1,14 +1,11 @@
 // ---------------------------------------------------------------------------
 // FluentUp — /api/quiz Route Handler
-// Generates personalized grammar quizzes using Gemini.
+// Generates personalized grammar quizzes using Gemini with DeepSeek fallback.
 // ---------------------------------------------------------------------------
 
 import { NextRequest } from "next/server";
-import { GoogleGenAI, Type } from "@google/genai";
+import { callGeminiQuiz } from "@/lib/gemini";
 import type { QuizResponse } from "@/lib/types";
-
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-const MODEL_NAME = "gemini-2.0-flash";
 
 export const dynamic = "force-dynamic";
 
@@ -51,52 +48,20 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(level || "intermediate", mistakes || []);
 
-    const response = await genai.models.generateContent({
-      model: MODEL_NAME,
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: "Generate a personalized multiple choice quiz question." }],
-        },
-      ],
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            question: { type: Type.STRING, description: "The quiz question text." },
-            options: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: "The options list (3 or 4 choices).",
-            },
-            correctIndex: { type: Type.NUMBER, description: "The 0-based index of the correct choice." },
-            explanation: { type: Type.STRING, description: "Warm, encouraging one-liner explaining why the choice is correct." },
-          },
-          required: ["question", "options", "correctIndex", "explanation"],
-        },
-      },
-    });
-
-    const text = response.text;
-    if (!text) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const data = JSON.parse(text);
+    // Use centralized function with Gemini → DeepSeek fallback
+    const data = await callGeminiQuiz(systemPrompt);
 
     // Coerce values to guarantee type safety
     const result: QuizResponse = {
       question: String(data.question || "Which sentence is correct?"),
-      options: Array.isArray(data.options) ? data.options.map(String) : ["Option A", "Option B"],
+      options: Array.isArray(data.options) ? (data.options as string[]).map(String) : ["Option A", "Option B"],
       correctIndex: typeof data.correctIndex === "number" ? data.correctIndex : 0,
       explanation: String(data.explanation || "That is correct! Great job! 😊"),
     };
 
     return Response.json(result);
   } catch (error) {
-    console.error("Quiz API error:", error);
+    console.error("Quiz API error (both Gemini and DeepSeek failed):", error);
 
     // Fallback standard quiz question
     const result: QuizResponse = {

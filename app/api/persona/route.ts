@@ -4,11 +4,8 @@
 // ---------------------------------------------------------------------------
 
 import { NextRequest } from "next/server";
-import { GoogleGenAI, Type } from "@google/genai";
+import { callGeminiPersona } from "@/lib/gemini";
 import type { PersonaMessage } from "@/lib/types";
-
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-const MODEL_NAME = "gemini-2.0-flash";
 
 export const dynamic = "force-dynamic";
 
@@ -99,53 +96,23 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(level, speakingPersona);
 
-    // Format chat history for Gemini input
+    // Format chat history for LLM input
     const formattedHistory = (history || []).slice(-8).map((msg) => ({
       role: msg.sender === "user" ? ("user" as const) : ("model" as const),
       text: `${msg.sender}: ${msg.text}`,
     }));
 
-    const response = await genai.models.generateContent({
-      model: MODEL_NAME,
-      contents: [
-        ...formattedHistory.map((h) => ({
-          role: h.role,
-          parts: [{ text: h.text }],
-        })),
-        {
-          role: "user",
-          parts: [{ text: `Generate the next message in the chat from ${speakingPersona.name}.` }],
-        },
-      ],
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            personaName: { type: Type.STRING, description: "Must be exactly: " + speakingPersona.name },
-            message: { type: Type.STRING, description: "The message text generated for this persona." },
-          },
-          required: ["personaName", "message"],
-        },
-      },
-    });
-
-    const text = response.text;
-    if (!text) {
-      throw new Error("Empty response from Gemini");
-    }
-
-    const data = JSON.parse(text);
+    // Use centralized function with Gemini → DeepSeek fallback
+    const data = await callGeminiPersona(systemPrompt, formattedHistory, speakingPersona.name);
 
     const result: PersonaMessage = {
       personaName: speakingPersona.name,
-      message: data.message || "Hey everyone! Let's keep practicing!",
+      message: (data.message as string) || "Hey everyone! Let's keep practicing!",
     };
 
     return Response.json(result);
   } catch (error) {
-    console.error("Persona API error:", error);
+    console.error("Persona API error (both Gemini and DeepSeek failed):", error);
 
     // Dynamic fallback so the simulation never breaks
     const fallbacks = [
