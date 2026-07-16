@@ -26,19 +26,23 @@ function getGenai(): GoogleGenAI {
 }
 
 /**
- * Clean Markdown formatting (e.g. ```json ... ```) from a string if present.
+ * Clean Markdown code fences (e.g. ```json ... ``` or ~~~json ... ~~~) from a
+ * string if present. Also strips a leading BOM character that some models emit.
+ *
+ * Bug #6: the original startsWith("```") check missed tilde fences, fences with
+ * a BOM, or fences where no newline follows the language tag. This regex handles
+ * all of those cases generically.
  */
 function cleanJsonString(str: string): string {
-  let cleaned = str.trim();
-  if (cleaned.startsWith("```")) {
-    // Bug #2: strip the opening fence whether or not a newline follows the language tag
-    cleaned = cleaned.replace(/^```[a-zA-Z]*\r?\n?/, "");
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.replace(/```$/, "");
-  }
+  // Strip BOM if present
+  let cleaned = str.replace(/^\uFEFF/, "").trim();
+  // Strip opening fence: ``` or ~~~ (3+ chars), optional language tag, optional whitespace/newline
+  cleaned = cleaned.replace(/^(?:`{3,}|~{3,})[a-zA-Z]*\r?\n?/, "");
+  // Strip closing fence: ``` or ~~~
+  cleaned = cleaned.replace(/(?:`{3,}|~{3,})$/, "");
   return cleaned.trim();
 }
+
 
 /**
  * Call DeepSeek API with a system instruction and user prompt, returning parsed JSON.

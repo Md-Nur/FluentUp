@@ -97,8 +97,8 @@ export default function MistakeDNACard({ updateTrigger = 0 }: MistakeDNACardProp
     );
   }
 
-  // Find max count to scale progress bars
-  const maxCount = Math.max(...patterns.map((p) => p.count));
+  // Find max count to scale progress bars; floor at 1 to avoid 0/−Infinity
+  const maxCount = Math.max(1, ...patterns.map((p) => p.count));
   const top2 = patterns.slice(0, 2);
 
   return (

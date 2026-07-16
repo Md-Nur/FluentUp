@@ -1,5 +1,13 @@
 import { MistakeLogEntry, MistakePattern } from "./types";
 
+/**
+ * Canonical normalisation for error-type strings.
+ * Always lowercase + trimmed so lookups are case-insensitive by construction.
+ */
+export function normalizeErrorType(s: string): string {
+  return s.toLowerCase().trim();
+}
+
 const LOCAL_STORAGE_KEY = "flu-mistake-log";
 
 /** Helper to safe-parse the log from localStorage */
@@ -27,11 +35,13 @@ export function saveMistakeLog(log: MistakeLogEntry[]): void {
 
 /** Add a single mistake entry to the log */
 export function addMistakeToLog(errorType: string, snippet: string): void {
-  if (!errorType || !snippet) return;
+  const cleanType = (errorType || "").trim();
+  const cleanSnippet = (snippet || "").trim();
+  if (!cleanType || !cleanSnippet) return;
   const log = getMistakeLog();
   const newEntry: MistakeLogEntry = {
-    error_type: errorType.trim(),
-    snippet: snippet.trim(),
+    error_type: cleanType,
+    snippet: cleanSnippet,
     timestamp: Date.now(),
   };
   log.push(newEntry);
@@ -45,7 +55,7 @@ export function getMistakePatterns(): MistakePattern[] {
 
   log.forEach((entry) => {
     const errorType = entry.error_type || "grammar";
-    const key = errorType.toLowerCase().trim();
+    const key = normalizeErrorType(errorType);
 
     if (!groups[key]) {
       groups[key] = {
@@ -83,11 +93,11 @@ export function getMistakePatterns(): MistakePattern[] {
  */
 export function improveMistakePattern(errorType: string): boolean {
   if (!errorType) return false;
-  const targetKey = errorType.toLowerCase().trim();
+  const targetKey = normalizeErrorType(errorType);
   const log = getMistakeLog();
 
   // Find the index of the OLDEST (first in log since we append) entry of this pattern
-  const idx = log.findIndex((entry) => (entry.error_type || "").toLowerCase().trim() === targetKey);
+  const idx = log.findIndex((entry) => normalizeErrorType(entry.error_type || "") === targetKey);
 
   if (idx !== -1) {
     log.splice(idx, 1);

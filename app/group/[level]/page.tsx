@@ -224,7 +224,7 @@ export default function GroupChatPage() {
           const xpGain = Math.floor(Math.random() * 5) + 5;
           setLeaderboard((prev) =>
             prev.map((p) =>
-              p.name === data.personaName ? { ...p, xp: p.xp + xpGain } : p
+              p.name.toLowerCase() === data.personaName.toLowerCase() ? { ...p, xp: p.xp + xpGain } : p
             )
           );
         }, 1500);
@@ -554,9 +554,12 @@ export default function GroupChatPage() {
                           const decreased = improveMistakePattern(patternName);
                           if (decreased) {
                             setProgressCallout(`Your grip on ${patternName} is getting stronger! 🚀`);
-                            setProgressTrigger((t) => t + 1);
-                            setDnaTrigger((t) => t + 1);
+                          } else {
+                            // Count already low — still encourage the user
+                            setProgressCallout(`You're nailing ${patternName}! Great work! 🎉`);
                           }
+                          setProgressTrigger((t) => t + 1);
+                          setDnaTrigger((t) => t + 1);
                         }
                       }}
                     />

@@ -192,18 +192,22 @@ export default function ChatPage() {
         setDnaTrigger((t) => t + 1);
         setConsecutiveCorrect(0);
       } else {
+        // Bug #3: read localStorage OUTSIDE the state updater so it stays pure
+        const currentPatterns = getMistakePatterns();
         setConsecutiveCorrect((prev) => {
           const nextVal = prev + 1;
           if (nextVal >= 3) {
-            const currentPatterns = getMistakePatterns();
             if (currentPatterns.length > 0) {
               const topPattern = currentPatterns[0];
               const decreased = improveMistakePattern(topPattern.errorType);
               if (decreased) {
                 setProgressCallout(`Your grip on ${topPattern.errorType} is getting stronger! 🚀`);
-                setProgressTrigger((t) => t + 1);
-                setDnaTrigger((t) => t + 1);
+              } else {
+                // Count already low — still encourage the user
+                setProgressCallout(`You're clearly improving your ${topPattern.errorType}! Keep it up! 🎉`);
               }
+              setProgressTrigger((t) => t + 1);
+              setDnaTrigger((t) => t + 1);
             }
             return 0; // Reset after triggering progress
           }
