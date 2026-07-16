@@ -74,6 +74,51 @@ export default function LandingPage() {
           </p>
         </div>
 
+        {/* Bengali Description */}
+        <div
+          style={{
+            marginBottom: "2rem",
+            animation: "flu-fade-up 0.5s cubic-bezier(0.22,1,0.36,1) 0.13s both",
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(99,102,241,0.08)",
+              border: "1.5px solid rgba(99,102,241,0.18)",
+              borderRadius: "1.1rem",
+              padding: "1.25rem 1.4rem",
+              textAlign: "center",
+              lineHeight: "1.9",
+              color: "var(--flu-text-secondary, #a5b4fc)",
+              fontSize: "0.97rem",
+              fontFamily: "inherit",
+            }}
+          >
+            <p style={{ marginBottom: "0.6rem", fontWeight: 700, fontSize: "1.05rem", color: "var(--flu-text, #e0e7ff)" }}>
+              🇧🇩 FluentUp কী?
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong style={{ color: "#c7d2fe" }}>FluentUp</strong> হলো তোমার ব্যক্তিগত ইংরেজি শিক্ষার বন্ধু। 🤝
+              <br />
+              এখানে তুমি{" "}
+              <strong style={{ color: "#a5b4fc" }}>Max</strong>-এর সাথে চ্যাট করে ইংরেজি অনুশীলন করতে পারবে —
+              ঠিক WhatsApp-এর মতো! 💬
+              <br />
+              Max তোমার বাক্যে কোনো ভুল হলে সুন্দরভাবে সংশোধন করে দেবে এবং
+              উৎসাহিত করবে। 🌟
+              <br />
+              প্রতিটি বার্তায় তুমি{" "}
+              <strong style={{ color: "#a5b4fc" }}>পয়েন্ট (XP)</strong> অর্জন করবে।
+              যত বেশি অনুশীলন, তত বেশি পয়েন্ট! 🏆
+              <br />
+              পর্যাপ্ত পয়েন্ট পেলে তুমি{" "}
+              <strong style={{ color: "#a5b4fc" }}>গ্রুপ চ্যাটে</strong> যোগ দিতে পারবে —
+              যেখানে AI বন্ধুদের সাথে মিলে ইংরেজিতে আড্ডা দিতে এবং
+              কুইজে অংশ নিতে পারবে! 🎯
+            </p>
+          </div>
+        </div>
+
         {/* Name Input */}
         <div
           style={{
