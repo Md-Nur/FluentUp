@@ -190,7 +190,7 @@ export async function callGeminiChat(
     if (!text) {
       throw new Error("Empty response from Gemini");
     }
-    return JSON.parse(text);
+    return JSON.parse(cleanJsonString(text));
   } catch (geminiError) {
     console.warn("Gemini Chat API call failed, attempting DeepSeek fallback...", geminiError);
     try {
@@ -253,7 +253,7 @@ export async function callGeminiPersona(
     if (!text) {
       throw new Error("Empty response from Gemini");
     }
-    return JSON.parse(text);
+    return JSON.parse(cleanJsonString(text));
   } catch (geminiError) {
     console.warn("Gemini Persona API call failed, attempting DeepSeek fallback...", geminiError);
     try {
@@ -323,7 +323,7 @@ export async function callGeminiQuiz(
     if (!text) {
       throw new Error("Empty response from Gemini");
     }
-    return JSON.parse(text);
+    return JSON.parse(cleanJsonString(text));
   } catch (geminiError) {
     console.warn("Gemini Quiz API call failed, attempting DeepSeek fallback...", geminiError);
     try {

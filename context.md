@@ -1,6 +1,6 @@
 # FluentUp — Project Context
 
-_Last updated: initial scaffold (create-next-app just run, no features built yet)_
+_Last updated: 2026-07-16 — Hardening & Polish pass complete_
 
 This document is the single source of truth for the project. Any AI model or developer
 picking up this codebase should read this file FIRST before writing any code, and should
@@ -146,6 +146,24 @@ To be defined in `/lib/types.ts` once chat is built — include `Message`, `User
 - [x] Visual polish / animations pass
 - [ ] Deployed to Vercel
 
+### Hardening & Polish (2026-07-16)
+
+**Bug Fixes**
+- [x] BUG 1 — Empty message submission: guarded by `isLoading` flag + disabled send button (was already correct; verified)
+- [x] BUG 2 — Long message overflow: added `overflow-wrap: anywhere` to `.flu-bubble`
+- [x] BUG 3 — Race condition / duplicate XP (1:1): `isLoading` flag prevents concurrent sends (verified correct)
+- [x] BUG 3 — Peer message timer instability (group): refactored `useEffect` to use `messagesRef` so interval is stable and doesn't restart on every message
+- [x] BUG 4 — localStorage restore on refresh: `flu-has-redirected` key persisted to localStorage so level-up modal doesn't re-trigger after a hard refresh
+- [x] BUG 5 — Gemini JSON parse safety: `cleanJsonString()` now applied to all three Gemini paths (chat, persona, quiz), not just the DeepSeek fallback; nested `try/catch` around `response.json()` in all fetch calls
+- [x] BUG 6 — Loading indicator flash: typing indicator now gated behind a 500ms `setTimeout` — fast API responses never cause a visual flicker
+- [x] BUG 7 — Mobile layout at 375px: level badge hidden on narrow screens, XP bar padding tightened, send button guaranteed 44px tap target, group header buttons abbreviated, quiz card `max-width: 100%`
+
+**Polish Additions**
+- [x] POLISH 1 — "Restart Demo" ghost button added to chat header (both 1:1 and group views); clears all localStorage and returns to landing
+- [x] POLISH 2 — XP bar glow pulse animation on XP gain (`flu-xp-fill--pulse` class + keyframe, toggled in `XPBar.tsx` via `useEffect`)
+- [x] POLISH 3 — Group chat pre-seeded with welcome messages from Priya and Kenji on first load so the room is never empty
+- [x] POLISH 4 — "Max is typing…" indicator already existed; now uses 500ms delay class for smooth fade-in; group peer typing indicator verified working
+
 **Build order priority (do not reorder without updating this doc):**
 1. 1:1 chat + live correction + XP (the core "wow" feature — get this rock solid first)
 2. Level-up transition animation
@@ -182,7 +200,12 @@ making sure known gaps are framed intentionally, not discovered live by a judge)
 - Leaderboard persona scores are designed to look plausible, not derived from a real
   scoring simulation engine.
 - Bypassed remote `next/font/google` fetch during production build by utilizing system sans-serif fonts in offline/sandbox environment.
-- (Add more here as they come up during the build.)
+- `flu-has-redirected` localStorage flag prevents the level-up modal from re-triggering
+  on refresh, but also means the demo needs the Restart button (or manual localStorage
+  clear) to replay the level-up flow.
+- Pre-seeded group messages (Priya, Kenji) are static strings, not API-generated —
+  they exist purely so the room looks alive on first load.
+- XP bar level badge is hidden on screens <480px (responsive tradeoff for layout fit).
 
 ---
 

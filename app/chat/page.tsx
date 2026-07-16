@@ -31,14 +31,19 @@ export default function ChatPage() {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Timer ref for delayed loading indicator (Bug 6)
+  const loadingDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // Bug 6: only show the typing indicator after 500ms of waiting
+  const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [toastAmount, setToastAmount] = useState(0);
   const [toastTrigger, setToastTrigger] = useState(0);
+  // Bug 4: initialise from localStorage so refresh mid-level-up doesn't retrigger modal
   const [hasRedirected, setHasRedirected] = useState(false);
   const [isLevelUpOpen, setIsLevelUpOpen] = useState(false);
   const [hasSeenCorrectionHint, setHasSeenCorrectionHint] = useState(true);
@@ -64,6 +69,10 @@ export default function ChatPage() {
       router.replace("/");
       return;
     }
+
+    // Bug 4: restore redirect flag so a refresh mid-level-up doesn't re-open modal
+    const alreadyRedirected = localStorage.getItem("flu-has-redirected") === "true";
+    setHasRedirected(alreadyRedirected);
 
     const storedMessages = localStorage.getItem("flu-messages");
     if (storedMessages) {
@@ -92,7 +101,27 @@ export default function ChatPage() {
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, showTypingIndicator]);
+
+  // Bug 6: Delayed typing indicator — only show after 500ms of waiting
+  useEffect(() => {
+    if (loadingDelayRef.current) {
+      clearTimeout(loadingDelayRef.current);
+      loadingDelayRef.current = null;
+    }
+
+    if (isLoading) {
+      loadingDelayRef.current = setTimeout(() => {
+        setShowTypingIndicator(true);
+      }, 500);
+    } else {
+      setShowTypingIndicator(false);
+    }
+
+    return () => {
+      if (loadingDelayRef.current) clearTimeout(loadingDelayRef.current);
+    };
+  }, [isLoading]);
 
   // Check for level-up (XP >= threshold)
   useEffect(() => {
@@ -132,12 +161,18 @@ export default function ChatPage() {
         }),
       });
 
-      const data: ChatResponse = await response.json();
+      // Bug 5: safe JSON parse — if response body is malformed, fall to catch
+      let data: ChatResponse;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Malformed JSON from /api/chat");
+      }
 
       const maxMessage: Message = {
         id: randomId(),
         sender: "max",
-        text: data.reply,
+        text: data.reply || "I'm here! Could you say that again? 😊",
         timestamp: Date.now(),
         xp_gained: data.xp_gained,
         ...(data.had_error &&
@@ -182,6 +217,15 @@ export default function ChatPage() {
     }
   }, [inputText, isLoading, messages, profile]);
 
+  // Polish 1: Restart Demo — clears all localStorage state and returns to landing
+  const handleRestartDemo = useCallback(() => {
+    localStorage.removeItem("flu-profile");
+    localStorage.removeItem("flu-messages");
+    localStorage.removeItem("flu-seen-hint");
+    localStorage.removeItem("flu-has-redirected");
+    router.replace("/");
+  }, [router]);
+
   // Don't render until we've checked for a profile
   if (!profile) {
     return (
@@ -204,6 +248,16 @@ export default function ChatPage() {
           <h2>Max</h2>
           <p>Your English Teacher</p>
         </div>
+        {/* Polish 1: Restart Demo — unobtrusive ghost button in the header */}
+        <button
+          type="button"
+          className="flu-restart-btn"
+          onClick={handleRestartDemo}
+          aria-label="Restart demo"
+          title="Clear progress and restart"
+        >
+          ↺ Restart
+        </button>
       </div>
 
       {/* XP Bar */}
@@ -239,9 +293,9 @@ export default function ChatPage() {
           ));
         })()}
 
-        {/* Typing indicator */}
-        {isLoading && (
-          <div className="flu-msg-row">
+        {/* Typing indicator — Bug 6: only shown after 500ms delay */}
+        {showTypingIndicator && (
+          <div className="flu-msg-row flu-typing-row--delayed">
             <div className="flu-msg-avatar-sm" aria-hidden="true">
               🎓
             </div>
@@ -300,6 +354,8 @@ export default function ChatPage() {
         onProceed={() => {
           setIsLevelUpOpen(false);
           setHasRedirected(true);
+          // Bug 4: persist so refresh doesn't re-trigger the modal
+          localStorage.setItem("flu-has-redirected", "true");
           router.push(`/group/${profile.level}`);
         }}
       />

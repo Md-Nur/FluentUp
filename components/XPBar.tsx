@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { UserProfile } from "@/lib/types";
 
 interface XPBarProps {
@@ -15,18 +16,31 @@ const LEVEL_LABELS: Record<string, string> = {
 
 export default function XPBar({ profile, xpThreshold = 10 }: XPBarProps) { // TODO: restore to 100 before production
   const xpPercent = Math.min((profile.xp / xpThreshold) * 100, 100);
+  const [isPulsing, setIsPulsing] = useState(false);
+  const isFirstMount = useRef(true);
+
+  // Trigger glow pulse whenever XP increases (skip initial mount)
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    setIsPulsing(true);
+    const timer = setTimeout(() => setIsPulsing(false), 700);
+    return () => clearTimeout(timer);
+  }, [profile.xp]);
 
   return (
     <div className="flu-xp-bar-wrap">
       {/* Level badge */}
-      <span className="flu-level-badge">
+      <span className="flu-level-badge flu-level-badge--responsive">
         {LEVEL_LABELS[profile.level] || profile.level}
       </span>
 
       {/* XP progress bar */}
       <div className="flu-xp-track" role="progressbar" aria-valuenow={profile.xp} aria-valuemin={0} aria-valuemax={xpThreshold}>
         <div
-          className="flu-xp-fill"
+          className={`flu-xp-fill${isPulsing ? " flu-xp-fill--pulse" : ""}`}
           style={{ width: `${xpPercent}%` }}
         />
       </div>

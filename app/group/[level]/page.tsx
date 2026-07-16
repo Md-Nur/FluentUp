@@ -27,6 +27,44 @@ function randomId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+// Polish 3: Pre-seeded persona messages so the room doesn't feel empty on load
+function buildInitialMessages(level: string): Message[] {
+  const now = Date.now();
+  return [
+    {
+      id: randomId(),
+      sender: "max",
+      text: `Welcome to the ${level.toUpperCase()} Practice Room! This is a group chat where you can practice speaking in real-time with other students. Let's start introducing ourselves!`,
+      timestamp: now - 60000,
+    },
+    {
+      id: randomId(),
+      sender: "max",
+      text: "Priya, Kenji, Chloe, Diego — say hello to our newest member!",
+      timestamp: now - 50000,
+    },
+    // Polish 3: Pre-seeded peer messages so the room isn't empty
+    {
+      id: randomId(),
+      sender: "priya",
+      text: "Hey! Welcome 🎉 Great to have someone new here! I've been practicing my vocabulary this week. What topic do you enjoy talking about?",
+      timestamp: now - 42000,
+    },
+    {
+      id: randomId(),
+      sender: "kenji",
+      text: "こんにちは! Oh wait — English only 😄 Hello! Nice to meet you. Don't be shy, we all make mistakes here. That's how we get better!",
+      timestamp: now - 35000,
+    },
+    {
+      id: randomId(),
+      sender: "max",
+      text: `(Tip: Chat freely. I'll stay here to give help and drop quick study challenges!)`,
+      timestamp: now - 28000,
+    },
+  ];
+}
+
 export default function GroupChatPage() {
   const router = useRouter();
   const params = useParams<{ level: string }>();
@@ -47,6 +85,13 @@ export default function GroupChatPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [userMessageCount, setUserMessageCount] = useState(0);
+
+  // Bug 3: use a ref so the peer timer closure always has fresh messages
+  // without restarting the interval on every new message
+  const messagesRef = useRef<Message[]>(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Load user profile & initialize group room
   useEffect(() => {
@@ -72,27 +117,8 @@ export default function GroupChatPage() {
         },
       ]);
 
-      // Initialize chat room with some welcome history
-      setMessages([
-        {
-          id: randomId(),
-          sender: "max",
-          text: `Welcome to the ${level.toUpperCase()} Practice Room! This is a group chat where you can practice speaking in real-time with other students. Let's start introducing ourselves!`,
-          timestamp: Date.now() - 60000,
-        },
-        {
-          id: randomId(),
-          sender: "max",
-          text: "Priya, Kenji, Chloe, Diego — say hello to our newest member!",
-          timestamp: Date.now() - 50000,
-        },
-        {
-          id: randomId(),
-          sender: "max",
-          text: `(Tip: Chat freely. I'll stay here to give help and drop quick study challenges!)`,
-          timestamp: Date.now() - 40000,
-        },
-      ]);
+      // Polish 3: Initialize chat room with pre-seeded welcome + peer messages
+      setMessages(buildInitialMessages(level));
     } catch {
       router.replace("/");
     }
@@ -113,7 +139,8 @@ export default function GroupChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, peerTyping]);
 
-  // Timer for AI Peer messages (Simulated room activity every 18 seconds)
+  // Bug 3: Timer for AI Peer messages — stable interval (depends only on profile/level,
+  // uses messagesRef to avoid restarting on every message)
   useEffect(() => {
     if (!profile) return;
 
@@ -134,8 +161,10 @@ export default function GroupChatPage() {
 
       // 2. Fetch peer response from API
       try {
-        const lastMsg = messages[messages.length - 1];
-        const speakerHistory = messages.map((m) => ({
+        // Bug 3: read from ref, not closure — avoids stale messages and timer restart
+        const currentMessages = messagesRef.current;
+        const lastMsg = currentMessages[currentMessages.length - 1];
+        const speakerHistory = currentMessages.map((m) => ({
           sender: m.sender,
           text: m.text,
         }));
@@ -150,7 +179,12 @@ export default function GroupChatPage() {
           }),
         });
 
-        const data: PersonaMessage = await res.json();
+        let data: PersonaMessage;
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error("Malformed JSON from /api/persona");
+        }
 
         // Small typing delay for realism
         setTimeout(() => {
@@ -160,7 +194,7 @@ export default function GroupChatPage() {
             ...prev,
             {
               id: randomId(),
-              sender: data.personaName.toLowerCase() as any, // Cast to match user/max/peers style
+              sender: data.personaName.toLowerCase() as Message["sender"],
               text: data.message,
               timestamp: Date.now(),
             },
@@ -183,7 +217,9 @@ export default function GroupChatPage() {
     }, 18000);
 
     return () => clearInterval(interval);
-  }, [level, messages, profile]);
+    // Bug 3: intentionally omit `messages` from deps — use messagesRef instead
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, profile]);
 
   // Function to manually or automatically trigger a quiz challenge
   const triggerQuizChallenge = useCallback(async () => {
@@ -199,7 +235,7 @@ export default function GroupChatPage() {
 
     try {
       // Gather past mistakes from the chat feed
-      const pastMistakes = messages
+      const pastMistakes = messagesRef.current
         .filter((m) => m.correction)
         .map((m) => ({
           original: m.correction!.original_snippet,
@@ -215,7 +251,12 @@ export default function GroupChatPage() {
         }),
       });
 
-      const quizData: QuizResponse = await res.json();
+      let quizData: QuizResponse;
+      try {
+        quizData = await res.json();
+      } catch {
+        throw new Error("Malformed JSON from /api/quiz");
+      }
 
       setPeerTyping(null);
       setMessages((prev) => [
@@ -234,7 +275,7 @@ export default function GroupChatPage() {
     } finally {
       setIsQuizLoading(false);
     }
-  }, [level, messages, profile, isQuizLoading]);
+  }, [level, profile, isQuizLoading]);
 
   // Trigger automatic quiz after every 3 messages sent by the user
   useEffect(() => {
@@ -263,18 +304,23 @@ export default function GroupChatPage() {
     inputRef.current?.focus();
 
     try {
-      // Send user message to /api/chat so Max can check for corrections and replying!
+      // Send user message to /api/chat so Max can check for corrections and reply
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage.text,
-          history: messages.slice(-5),
+          history: messagesRef.current.slice(-5),
           userProfile: profile,
         }),
       });
 
-      const data: ChatResponse = await res.json();
+      let data: ChatResponse;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Malformed JSON from /api/chat");
+      }
 
       // Update XP & Streak
       setProfile((prev) => {
@@ -327,7 +373,16 @@ export default function GroupChatPage() {
     } finally {
       setIsSending(false);
     }
-  }, [inputText, isSending, messages, profile]);
+  }, [inputText, isSending, profile]);
+
+  // Polish 1: Restart Demo — clears all state and returns to landing
+  const handleRestartDemo = useCallback(() => {
+    localStorage.removeItem("flu-profile");
+    localStorage.removeItem("flu-messages");
+    localStorage.removeItem("flu-seen-hint");
+    localStorage.removeItem("flu-has-redirected");
+    router.replace("/");
+  }, [router]);
 
   if (!profile) {
     return (
@@ -363,21 +418,34 @@ export default function GroupChatPage() {
           <div className="flu-max-avatar" aria-hidden="true" style={{ background: "linear-gradient(135deg, var(--flu-accent), var(--flu-warning))" }}>
             💬
           </div>
-          <div className="flu-header-info" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "1rem" }}>
-            <div style={{ flex: 1 }}>
+          <div className="flu-header-info" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "0.5rem" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <h2>{level.toUpperCase()} English Room</h2>
               <p style={{ color: "var(--flu-text-secondary)" }}>
                 {INITIAL_PEERS.filter((p) => p.name !== "Max").length + 2} online including Max
               </p>
             </div>
-            <button
-              type="button"
-              className="flu-challenge-btn"
-              onClick={triggerQuizChallenge}
-              disabled={isQuizLoading}
-            >
-              📚 Request Challenge
-            </button>
+            {/* Group header action buttons */}
+            <div className="flu-group-header-actions">
+              <button
+                type="button"
+                className="flu-challenge-btn"
+                onClick={triggerQuizChallenge}
+                disabled={isQuizLoading}
+              >
+                📚 Challenge
+              </button>
+              {/* Polish 1: Restart Demo button */}
+              <button
+                type="button"
+                className="flu-restart-btn"
+                onClick={handleRestartDemo}
+                aria-label="Restart demo"
+                title="Clear progress and restart"
+              >
+                ↺ Restart
+              </button>
+            </div>
           </div>
         </div>
 
