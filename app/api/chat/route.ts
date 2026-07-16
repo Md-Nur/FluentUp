@@ -77,22 +77,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build conversation history for context
-    const conversationHistory = (history || []).slice(-10).map((msg) => ({
-      role: msg.sender === "user" ? ("user" as const) : ("model" as const),
-      text:
-        msg.sender === "max" && msg.correction
-          ? JSON.stringify({
-              reply: msg.text,
-              had_error: true,
-              original_snippet: msg.correction.original_snippet,
-              corrected_snippet: msg.correction.corrected_snippet,
-              error_type: msg.correction.error_type,
-              explanation: msg.correction.explanation,
-              xp_gained: msg.xp_gained || 10,
-            })
-          : msg.text,
-    }));
+    // Build conversation history for context (filtering to user and max messages only, Bug #7)
+    const conversationHistory = (history || [])
+      .filter((msg) => msg.sender === "user" || msg.sender === "max")
+      .slice(-10)
+      .map((msg) => ({
+        role: msg.sender === "user" ? ("user" as const) : ("model" as const),
+        text: msg.text,
+      }));
 
     const systemPrompt = buildSystemPrompt(userProfile);
 

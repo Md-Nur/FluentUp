@@ -5,8 +5,25 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 const MODEL_NAME = "gemini-2.0-flash";
+
+// ---------------------------------------------------------------------------
+// Bug #6: Lazy-init the Gemini client so a missing key causes a clear per-
+// request 500 instead of crashing the entire module at import time.
+// ---------------------------------------------------------------------------
+let _genai: GoogleGenAI | null = null;
+function getGenai(): GoogleGenAI {
+  if (!_genai) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        "GEMINI_API_KEY is not set. Add it to your .env.local file."
+      );
+    }
+    _genai = new GoogleGenAI({ apiKey });
+  }
+  return _genai;
+}
 
 /**
  * Clean Markdown formatting (e.g. ```json ... ```) from a string if present.
@@ -14,7 +31,8 @@ const MODEL_NAME = "gemini-2.0-flash";
 function cleanJsonString(str: string): string {
   let cleaned = str.trim();
   if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```[a-zA-Z]*\n/, "");
+    // Bug #2: strip the opening fence whether or not a newline follows the language tag
+    cleaned = cleaned.replace(/^```[a-zA-Z]*\r?\n?/, "");
   }
   if (cleaned.endsWith("```")) {
     cleaned = cleaned.replace(/```$/, "");
@@ -145,7 +163,7 @@ export async function callGeminiChat(
   };
 
   try {
-    const response = await genai.models.generateContent({
+    const response = await getGenai().models.generateContent({
       model: MODEL_NAME,
       contents,
       config: {
@@ -193,6 +211,10 @@ export async function callGeminiChat(
     return JSON.parse(cleanJsonString(text));
   } catch (geminiError) {
     console.warn("Gemini Chat API call failed, attempting DeepSeek fallback...", geminiError);
+    if (!process.env.DEEPSEEK_API_KEY) {
+      console.warn("DEEPSEEK_API_KEY is not configured. Skipping fallback.");
+      throw geminiError;
+    }
     try {
       return await callDeepSeek(systemInstruction, userMessage, conversationHistory, chatSchema);
     } catch (deepseekError) {
@@ -232,7 +254,7 @@ export async function callGeminiPersona(
   };
 
   try {
-    const response = await genai.models.generateContent({
+    const response = await getGenai().models.generateContent({
       model: MODEL_NAME,
       contents,
       config: {
@@ -256,6 +278,10 @@ export async function callGeminiPersona(
     return JSON.parse(cleanJsonString(text));
   } catch (geminiError) {
     console.warn("Gemini Persona API call failed, attempting DeepSeek fallback...", geminiError);
+    if (!process.env.DEEPSEEK_API_KEY) {
+      console.warn("DEEPSEEK_API_KEY is not configured. Skipping fallback.");
+      throw geminiError;
+    }
     try {
       return await callDeepSeek(systemInstruction, userMessage, conversationHistory, personaSchema);
     } catch (deepseekError) {
@@ -296,7 +322,7 @@ export async function callGeminiQuiz(
   };
 
   try {
-    const response = await genai.models.generateContent({
+    const response = await getGenai().models.generateContent({
       model: MODEL_NAME,
       contents,
       config: {
@@ -326,6 +352,10 @@ export async function callGeminiQuiz(
     return JSON.parse(cleanJsonString(text));
   } catch (geminiError) {
     console.warn("Gemini Quiz API call failed, attempting DeepSeek fallback...", geminiError);
+    if (!process.env.DEEPSEEK_API_KEY) {
+      console.warn("DEEPSEEK_API_KEY is not configured. Skipping fallback.");
+      throw geminiError;
+    }
     try {
       return await callDeepSeek(systemInstruction, userMessage, [], quizSchema);
     } catch (deepseekError) {

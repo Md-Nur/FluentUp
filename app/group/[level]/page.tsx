@@ -85,6 +85,10 @@ export default function GroupChatPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [userMessageCount, setUserMessageCount] = useState(0);
+  const [openQuizId, setOpenQuizId] = useState<string | null>(null);
+
+  // Bug 5: track the peer message typing setTimeout to clear on unmount
+  const peerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Bug 3: use a ref so the peer timer closure always has fresh messages
   // without restarting the interval on every new message
@@ -187,7 +191,7 @@ export default function GroupChatPage() {
         }
 
         // Small typing delay for realism
-        setTimeout(() => {
+        peerTimeoutRef.current = setTimeout(() => {
           setPeerTyping(null);
           
           setMessages((prev) => [
@@ -216,14 +220,19 @@ export default function GroupChatPage() {
 
     }, 18000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (peerTimeoutRef.current) {
+        clearTimeout(peerTimeoutRef.current);
+      }
+    };
     // Bug 3: intentionally omit `messages` from deps — use messagesRef instead
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level, profile]);
 
   // Function to manually or automatically trigger a quiz challenge
   const triggerQuizChallenge = useCallback(async () => {
-    if (isQuizLoading || !profile) return;
+    if (isQuizLoading || !profile || openQuizId) return;
 
     setIsQuizLoading(true);
     
@@ -236,11 +245,11 @@ export default function GroupChatPage() {
     try {
       // Gather past mistakes from the chat feed
       const pastMistakes = messagesRef.current
-        .filter((m) => m.correction)
-        .map((m) => ({
-          original: m.correction!.original_snippet,
-          corrected: m.correction!.corrected_snippet,
-        }));
+          .filter((m) => m.correction)
+          .map((m) => ({
+            original: m.correction!.original_snippet,
+            corrected: m.correction!.corrected_snippet,
+          }));
 
       const res = await fetch("/api/quiz", {
         method: "POST",
@@ -258,34 +267,36 @@ export default function GroupChatPage() {
         throw new Error("Malformed JSON from /api/quiz");
       }
 
+      const newQuizId = randomId();
       setPeerTyping(null);
       setMessages((prev) => [
         ...prev,
         {
-          id: randomId(),
+          id: newQuizId,
           sender: "max",
           text: "Challenge time! Let's see if we can solve this grammar puzzle. Tap the correct option below!",
           timestamp: Date.now(),
           quiz: quizData,
         },
       ]);
+      setOpenQuizId(newQuizId);
     } catch (err) {
       console.error("Failed to generate quiz:", err);
       setPeerTyping(null);
     } finally {
       setIsQuizLoading(false);
     }
-  }, [level, profile, isQuizLoading]);
+  }, [level, profile, isQuizLoading, openQuizId]);
 
-  // Trigger automatic quiz after every 3 messages sent by the user
+  // Trigger automatic quiz after every 6 messages sent by the user (and only if no quiz is open)
   useEffect(() => {
-    if (userMessageCount > 0 && userMessageCount % 3 === 0) {
+    if (userMessageCount > 0 && userMessageCount % 6 === 0 && !openQuizId) {
       const timer = setTimeout(() => {
         triggerQuizChallenge();
       }, 3000); // 3 seconds delay after user message
       return () => clearTimeout(timer);
     }
-  }, [userMessageCount, triggerQuizChallenge]);
+  }, [userMessageCount, openQuizId, triggerQuizChallenge]);
 
   const sendUserMessage = useCallback(async () => {
     if (!inputText.trim() || isSending || !profile) return;
@@ -431,7 +442,7 @@ export default function GroupChatPage() {
                 type="button"
                 className="flu-challenge-btn"
                 onClick={triggerQuizChallenge}
-                disabled={isQuizLoading}
+                disabled={isQuizLoading || !!openQuizId}
               >
                 📚 Challenge
               </button>
@@ -511,6 +522,7 @@ export default function GroupChatPage() {
                         });
                         setToastAmount(xpGain);
                         setToastTrigger((t) => t + 1);
+                        setOpenQuizId(null);
                       }}
                     />
                   )}

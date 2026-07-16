@@ -43,7 +43,7 @@ names, never as UI text). Corrections must always feel encouraging, never clinic
 
 ## 2. Tech Stack
 
-- Next.js 14, App Router, TypeScript
+- Next.js 16, App Router, TypeScript
 - Tailwind CSS
 - Google Gemini API (check Google AI Studio for the current recommended model name
   before hardcoding one — model names change)

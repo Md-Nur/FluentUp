@@ -8,7 +8,7 @@ import XPBar from "@/components/XPBar";
 import XPToast from "@/components/XPToast";
 import LevelUpModal from "@/components/LevelUpModal";
 
-const XP_THRESHOLD = 10; // TODO: restore to 100 before production
+const XP_THRESHOLD = 100;
 
 const FRIENDLY_LOADING_MESSAGES = [
   "Max is thinking… 🤔",
@@ -351,6 +351,7 @@ export default function ChatPage() {
         isOpen={isLevelUpOpen}
         name={profile.name}
         currentLevel={profile.level}
+        xpThreshold={XP_THRESHOLD}
         onProceed={() => {
           setIsLevelUpOpen(false);
           setHasRedirected(true);

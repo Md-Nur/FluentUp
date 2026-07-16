@@ -22,7 +22,7 @@ FluentUp was built in a single day at **Build With AI Hack Days @RU**, powered b
 
 | Layer | Choice | Why |
 |---|---|---|
-| Framework | Next.js 14 (App Router) | Server components + API routes in one project |
+| Framework | Next.js 16 (App Router) | Server components + API routes in one project |
 | Language | TypeScript | Catches shape mismatches between Gemini responses and UI |
 | AI | Google Gemini API | Gemini's instruction-following and JSON-mode make it ideal for structured educational feedback |
 | State | React state + `localStorage` | Zero backend setup, persists across demo refreshes |

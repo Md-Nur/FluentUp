@@ -12,12 +12,20 @@ export default function QuizCard({ quiz, onCorrectAnswer }: QuizCardProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
 
+  // Guard correctIndex bounds (e.g. when options length changed)
+  const correctIndex =
+    typeof quiz.correctIndex === "number" &&
+    quiz.correctIndex >= 0 &&
+    quiz.correctIndex < quiz.options.length
+      ? quiz.correctIndex
+      : 0;
+
   function handleOptionSelect(idx: number) {
     if (answered) return;
     setSelectedIdx(idx);
     setAnswered(true);
 
-    if (idx === quiz.correctIndex) {
+    if (idx === correctIndex) {
       // Award 20 XP for a correct answer!
       onCorrectAnswer(20);
     } else {
@@ -42,9 +50,9 @@ export default function QuizCard({ quiz, onCorrectAnswer }: QuizCardProps) {
         {quiz.options.map((option, idx) => {
           let btnClass = "";
           if (answered) {
-            if (idx === quiz.correctIndex) {
+            if (idx === correctIndex) {
               btnClass = "correct"; // Correct option always turns green
-            } else if (idx === selectedIdx && selectedIdx !== quiz.correctIndex) {
+            } else if (idx === selectedIdx && selectedIdx !== correctIndex) {
               btnClass = "incorrect"; // Wrong choice turns red
             } else {
               btnClass = "disabled";
@@ -53,7 +61,7 @@ export default function QuizCard({ quiz, onCorrectAnswer }: QuizCardProps) {
 
           return (
             <button
-              key={option}
+              key={idx}
               type="button"
               className={`flu-quiz-opt-btn ${btnClass}`}
               disabled={answered}
@@ -69,7 +77,7 @@ export default function QuizCard({ quiz, onCorrectAnswer }: QuizCardProps) {
       {answered && (
         <div className="flu-quiz-feedback">
           <div className="flu-quiz-feedback-title">
-            {selectedIdx === quiz.correctIndex ? (
+            {selectedIdx === correctIndex ? (
               <span className="text-success">🎉 Correct! (+20 XP)</span>
             ) : (
               <span className="text-error">Good attempt! (+5 XP)</span>

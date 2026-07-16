@@ -14,7 +14,7 @@ const LEVEL_LABELS: Record<string, string> = {
   advanced: "🌳 Advanced",
 };
 
-export default function XPBar({ profile, xpThreshold = 10 }: XPBarProps) { // TODO: restore to 100 before production
+export default function XPBar({ profile, xpThreshold = 100 }: XPBarProps) {
   const xpPercent = Math.min((profile.xp / xpThreshold) * 100, 100);
   const [isPulsing, setIsPulsing] = useState(false);
   const isFirstMount = useRef(true);
@@ -38,7 +38,7 @@ export default function XPBar({ profile, xpThreshold = 10 }: XPBarProps) { // TO
       </span>
 
       {/* XP progress bar */}
-      <div className="flu-xp-track" role="progressbar" aria-valuenow={profile.xp} aria-valuemin={0} aria-valuemax={xpThreshold}>
+      <div className="flu-xp-track" role="progressbar" aria-valuenow={Math.round(xpPercent)} aria-valuemin={0} aria-valuemax={100} aria-label="XP progress">
         <div
           className={`flu-xp-fill${isPulsing ? " flu-xp-fill--pulse" : ""}`}
           style={{ width: `${xpPercent}%` }}

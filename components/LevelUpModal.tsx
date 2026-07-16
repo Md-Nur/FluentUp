@@ -6,6 +6,7 @@ interface LevelUpModalProps {
   isOpen: boolean;
   name: string;
   currentLevel: "beginner" | "intermediate" | "advanced";
+  xpThreshold: number;
   onProceed: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function LevelUpModal({
   isOpen,
   name,
   currentLevel,
+  xpThreshold,
   onProceed,
 }: LevelUpModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -68,7 +70,7 @@ export default function LevelUpModal({
         </h1>
         
         <p className="flu-modal-desc">
-          You earned 100 points! You have mastered the basics and leveled up. Let&apos;s put your skills to the test in the group chat.
+          You earned {xpThreshold} points! You have mastered the basics and leveled up. Let&apos;s put your skills to the test in the group chat.
         </p>
 
         {/* Level Progression Visualizer */}
