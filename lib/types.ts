@@ -21,6 +21,20 @@ export interface QuizResponse {
   options: string[]; // multiple choice
   correctIndex: number;
   explanation: string; // shown after answering, encouraging tone
+  targetedPattern?: string | null;
+}
+
+export interface MistakeLogEntry {
+  error_type: string;
+  snippet: string;
+  timestamp: number;
+}
+
+export interface MistakePattern {
+  errorType: string;
+  count: number;
+  examples: string[];
+  lastSeen: number;
 }
 
 /** Response shape from `/api/persona` */

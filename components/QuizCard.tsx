@@ -5,7 +5,7 @@ import type { QuizResponse } from "@/lib/types";
 
 interface QuizCardProps {
   quiz: QuizResponse;
-  onCorrectAnswer: (xpGain: number) => void;
+  onCorrectAnswer: (xpGain: number, patternName?: string) => void;
 }
 
 export default function QuizCard({ quiz, onCorrectAnswer }: QuizCardProps) {
@@ -27,15 +27,22 @@ export default function QuizCard({ quiz, onCorrectAnswer }: QuizCardProps) {
 
     if (idx === correctIndex) {
       // Award 20 XP for a correct answer!
-      onCorrectAnswer(20);
+      onCorrectAnswer(20, quiz.targetedPattern || undefined);
     } else {
       // Award 5 XP just for attempting! Encouragement matters.
-      onCorrectAnswer(5);
+      onCorrectAnswer(5, quiz.targetedPattern || undefined);
     }
   }
 
   return (
     <div className="flu-quiz-card">
+      {/* DNA Framing Line */}
+      {quiz.targetedPattern && (
+        <div className="flu-quiz-framing">
+          🎯 This one&apos;s for your <strong>{quiz.targetedPattern.toLowerCase()}</strong> pattern — let&apos;s squash it!
+        </div>
+      )}
+
       {/* Quiz Header */}
       <div className="flu-quiz-header" aria-hidden="true">
         <span>📝</span>

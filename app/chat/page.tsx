@@ -7,6 +7,8 @@ import MessageBubble from "@/components/MessageBubble";
 import XPBar from "@/components/XPBar";
 import XPToast from "@/components/XPToast";
 import LevelUpModal from "@/components/LevelUpModal";
+import MistakeDNACard from "@/components/MistakeDNACard";
+import { addMistakeToLog, clearMistakeLog, improveMistakePattern, getMistakePatterns } from "@/lib/mistakeTracker";
 
 const XP_THRESHOLD = 100;
 
@@ -47,6 +49,21 @@ export default function ChatPage() {
   const [hasRedirected, setHasRedirected] = useState(false);
   const [isLevelUpOpen, setIsLevelUpOpen] = useState(false);
   const [hasSeenCorrectionHint, setHasSeenCorrectionHint] = useState(true);
+
+  // Mistake DNA state
+  const [dnaTrigger, setDnaTrigger] = useState(0);
+  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
+  const [progressCallout, setProgressCallout] = useState<string | null>(null);
+  const [progressTrigger, setProgressTrigger] = useState(0);
+
+  // Clear progress callout toast after 3 seconds
+  useEffect(() => {
+    if (progressTrigger === 0) return;
+    const timer = setTimeout(() => {
+      setProgressCallout(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [progressTrigger]);
 
   // Check onboarding status on client mount
   useEffect(() => {
@@ -169,6 +186,31 @@ export default function ChatPage() {
         throw new Error("Malformed JSON from /api/chat");
       }
 
+      // Update Mistake DNA Log or track correct usage
+      if (data.had_error && data.error_type && data.original_snippet) {
+        addMistakeToLog(data.error_type, data.original_snippet);
+        setDnaTrigger((t) => t + 1);
+        setConsecutiveCorrect(0);
+      } else {
+        setConsecutiveCorrect((prev) => {
+          const nextVal = prev + 1;
+          if (nextVal >= 3) {
+            const currentPatterns = getMistakePatterns();
+            if (currentPatterns.length > 0) {
+              const topPattern = currentPatterns[0];
+              const decreased = improveMistakePattern(topPattern.errorType);
+              if (decreased) {
+                setProgressCallout(`Your grip on ${topPattern.errorType} is getting stronger! 🚀`);
+                setProgressTrigger((t) => t + 1);
+                setDnaTrigger((t) => t + 1);
+              }
+            }
+            return 0; // Reset after triggering progress
+          }
+          return nextVal;
+        });
+      }
+
       const maxMessage: Message = {
         id: randomId(),
         sender: "max",
@@ -223,6 +265,7 @@ export default function ChatPage() {
     localStorage.removeItem("flu-messages");
     localStorage.removeItem("flu-seen-hint");
     localStorage.removeItem("flu-has-redirected");
+    clearMistakeLog();
     router.replace("/");
   }, [router]);
 
@@ -262,6 +305,9 @@ export default function ChatPage() {
 
       {/* XP Bar */}
       <XPBar profile={profile} xpThreshold={XP_THRESHOLD} />
+
+      {/* Mistake DNA Card */}
+      <MistakeDNACard updateTrigger={dnaTrigger} />
 
       {/* Messages */}
       <div className="flu-messages">
@@ -345,6 +391,15 @@ export default function ChatPage() {
 
       {/* XP Toast */}
       <XPToast amount={toastAmount} triggerId={toastTrigger} />
+
+      {/* Progress Callout Toast */}
+      {progressCallout && (
+        <div className="flu-progress-toast" key={progressTrigger}>
+          <div className="flu-progress-toast-inner">
+            🌟 {progressCallout}
+          </div>
+        </div>
+      )}
 
       {/* Level Up Modal */}
       <LevelUpModal

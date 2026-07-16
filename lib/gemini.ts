@@ -317,8 +317,9 @@ export async function callGeminiQuiz(
       },
       correctIndex: { type: "number", description: "The 0-based index of the correct choice." },
       explanation: { type: "string", description: "Warm, encouraging one-liner explaining why the choice is correct." },
+      targetedPattern: { type: "string", description: "The name of the mistake pattern targeted (e.g. 'articles', 'past tense'), or empty string if none." },
     },
-    required: ["question", "options", "correctIndex", "explanation"],
+    required: ["question", "options", "correctIndex", "explanation", "targetedPattern"],
   };
 
   try {
@@ -339,8 +340,9 @@ export async function callGeminiQuiz(
             },
             correctIndex: { type: Type.NUMBER, description: "The 0-based index of the correct choice." },
             explanation: { type: Type.STRING, description: "Warm, encouraging one-liner explaining why the choice is correct." },
+            targetedPattern: { type: Type.STRING, description: "The name of the mistake pattern targeted, or empty string if none." },
           },
-          required: ["question", "options", "correctIndex", "explanation"],
+          required: ["question", "options", "correctIndex", "explanation", "targetedPattern"],
         },
       },
     });

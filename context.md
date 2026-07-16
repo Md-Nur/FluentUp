@@ -18,6 +18,9 @@ with an AI teacher ("Max"), get live, encouraging grammar corrections, earn XP, 
 up. Once leveled up, they join a group chat with AI-simulated peers where Max drops in
 gamified quiz challenges, and a leaderboard tracks everyone's progress.
 
+**Signature Feature — Mistake DNA:**
+Instead of treating grammar corrections as isolated one-off events, FluentUp tracks recurring error patterns across the user's entire conversation to build a personal "learning fingerprint." This Mistake DNA is computed client-side, visualised in a premium double-helix themed card, and directly drives the personalized quiz generation in the group chat to target the user's active growth areas. Over time, as the user improves and corrects these tenses/rules, the DNA dynamically updates to reflect their progress.
+
 **Why it matters / target user:** IELTS aspirants and casual language learners who want
 low-pressure, social, encouraging practice — not a clinical grammar checker. Built for a
 one-day hackathon (Build With AI Hack Days @RU, powered by Google for Developers / Gemini),
@@ -74,9 +77,11 @@ create-next-app scaffold, nothing custom built yet)_
   LeaderboardCard.tsx [COMPLETED]
   QuizCard.tsx        [COMPLETED]
   LevelUpModal.tsx    [COMPLETED]
+  MistakeDNACard.tsx  [COMPLETED]
 /lib
   types.ts   -> shared TypeScript interfaces [COMPLETED]
   gemini.ts  -> Gemini API client helper [COMPLETED]
+  mistakeTracker.ts -> client-side mistake logger & aggregator [COMPLETED]
 CONTEXT.md   -> this file
 ```
 
@@ -112,6 +117,23 @@ interface QuizResponse {
   options: string[];       // multiple choice
   correctIndex: number;
   explanation: string;     // shown after answering, encouraging tone
+  targetedPattern?: string | null;
+}
+```
+
+### Mistake DNA Data Shapes
+```ts
+interface MistakeLogEntry {
+  error_type: string;
+  snippet: string;
+  timestamp: number;
+}
+
+interface MistakePattern {
+  errorType: string;
+  count: number;
+  examples: string[];
+  lastSeen: number;
 }
 ```
 
@@ -144,6 +166,7 @@ To be defined in `/lib/types.ts` once chat is built — include `Message`, `User
 - [x] First-use onboarding hints (e.g. tooltip first time a correction appears)
 - [x] Friendly loading states everywhere ("Max is thinking..." not bare spinners)
 - [x] Visual polish / animations pass
+- [x] Mistake DNA: fingerprint visual component + real-time localStorage tracking & quiz tailoring
 - [ ] Deployed to Vercel
 
 ### Hardening & Polish (2026-07-16)
@@ -187,6 +210,10 @@ To be defined in `/lib/types.ts` once chat is built — include `Message`, `User
   product requirement, not just a style preference.
 - **Strict JSON responses from Gemini:** keeps the frontend simple (one call, one
   parseable shape) rather than doing multiple round trips per message.
+- **Reframing around Mistake DNA instead of isolated grammar edits:** Differentiates FluentUp
+  from generic "AI grammar corrector" hackathon projects. Reframing the app around tracking
+  recurring patterns client-side, visualising a fingerprint, and actively closing the loop
+  with targeted quizzes turns simple correction features into the app's signature capability.
 
 ---
 

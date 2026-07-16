@@ -8,6 +8,8 @@ import LeaderboardCard, { LeaderboardUser } from "@/components/LeaderboardCard";
 import XPToast from "@/components/XPToast";
 import QuizCard from "@/components/QuizCard";
 import type { QuizResponse } from "@/lib/types";
+import MistakeDNACard from "@/components/MistakeDNACard";
+import { addMistakeToLog, clearMistakeLog, improveMistakePattern, getMistakePatterns } from "@/lib/mistakeTracker";
 
 const FRIENDLY_TYPING_MESSAGES = [
   "is typing… ✍️",
@@ -79,6 +81,20 @@ export default function GroupChatPage() {
   const [isSending, setIsSending] = useState(false);
   const [toastAmount, setToastAmount] = useState(0);
   const [toastTrigger, setToastTrigger] = useState(0);
+
+  // Mistake DNA state
+  const [dnaTrigger, setDnaTrigger] = useState(0);
+  const [progressCallout, setProgressCallout] = useState<string | null>(null);
+  const [progressTrigger, setProgressTrigger] = useState(0);
+
+  // Clear progress callout toast after 3 seconds
+  useEffect(() => {
+    if (progressTrigger === 0) return;
+    const timer = setTimeout(() => {
+      setProgressCallout(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [progressTrigger]);
 
   // Simulation states
   const [peerTyping, setPeerTyping] = useState<{ name: string; text: string } | null>(null);
@@ -251,12 +267,15 @@ export default function GroupChatPage() {
             corrected: m.correction!.corrected_snippet,
           }));
 
+      const currentPatterns = getMistakePatterns();
+
       const res = await fetch("/api/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           level,
           mistakes: pastMistakes,
+          mistakePatterns: currentPatterns,
         }),
       });
 
@@ -348,6 +367,9 @@ export default function GroupChatPage() {
 
       // If user had a grammar mistake, Max drops in a public correction in the group chat!
       if (data.had_error && data.original_snippet && data.corrected_snippet) {
+        addMistakeToLog(data.error_type || "grammar", data.original_snippet);
+        setDnaTrigger((t) => t + 1);
+
         setMessages((prev) => [
           ...prev,
           {
@@ -392,6 +414,7 @@ export default function GroupChatPage() {
     localStorage.removeItem("flu-messages");
     localStorage.removeItem("flu-seen-hint");
     localStorage.removeItem("flu-has-redirected");
+    clearMistakeLog();
     router.replace("/");
   }, [router]);
 
@@ -460,6 +483,9 @@ export default function GroupChatPage() {
           </div>
         </div>
 
+        {/* Mistake DNA Card */}
+        <MistakeDNACard updateTrigger={dnaTrigger} />
+
         {/* Group Feed Messages */}
         <div className="flu-messages">
           {messages.map((msg) => {
@@ -515,7 +541,7 @@ export default function GroupChatPage() {
                   {msg.quiz && (
                     <QuizCard
                       quiz={msg.quiz}
-                      onCorrectAnswer={(xpGain) => {
+                      onCorrectAnswer={(xpGain, patternName) => {
                         setProfile((prev) => {
                           if (!prev) return prev;
                           return { ...prev, xp: prev.xp + xpGain };
@@ -523,6 +549,15 @@ export default function GroupChatPage() {
                         setToastAmount(xpGain);
                         setToastTrigger((t) => t + 1);
                         setOpenQuizId(null);
+
+                        if (xpGain === 20 && patternName) {
+                          const decreased = improveMistakePattern(patternName);
+                          if (decreased) {
+                            setProgressCallout(`Your grip on ${patternName} is getting stronger! 🚀`);
+                            setProgressTrigger((t) => t + 1);
+                            setDnaTrigger((t) => t + 1);
+                          }
+                        }
                       }}
                     />
                   )}
@@ -589,6 +624,15 @@ export default function GroupChatPage() {
 
       {/* XP Toast */}
       <XPToast amount={toastAmount} triggerId={toastTrigger} />
+
+      {/* Progress Callout Toast */}
+      {progressCallout && (
+        <div className="flu-progress-toast" key={progressTrigger}>
+          <div className="flu-progress-toast-inner">
+            🌟 {progressCallout}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
