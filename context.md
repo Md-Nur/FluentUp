@@ -61,21 +61,22 @@ create-next-app scaffold, nothing custom built yet)_
 
 ```
 /app
-  /page.tsx              -> landing screen (name + level picker) [NOT STARTED]
-  /chat/page.tsx          -> 1:1 chat with Max [NOT STARTED]
-  /group/[level]/page.tsx -> group chat + quiz + leaderboard [NOT STARTED]
-  /api/chat/route.ts      -> Gemini call for 1:1 chat + correction [NOT STARTED]
-  /api/quiz/route.ts      -> Gemini call to generate quiz question [NOT STARTED]
-  /api/persona/route.ts   -> Gemini call to generate AI peer messages [NOT STARTED]
+  /page.tsx              -> landing screen (name + level picker) [COMPLETED]
+  /chat/page.tsx          -> 1:1 chat with Max [COMPLETED]
+  /group/[level]/page.tsx -> group chat + quiz + leaderboard [COMPLETED]
+  /api/chat/route.ts      -> Gemini call for 1:1 chat + correction [COMPLETED]
+  /api/quiz/route.ts      -> Gemini call to generate quiz question [COMPLETED]
+  /api/persona/route.ts   -> Gemini call to generate AI peer messages [COMPLETED]
 /components
-  MessageBubble.tsx   [NOT STARTED]
-  XPBar.tsx           [NOT STARTED]
-  LeaderboardCard.tsx [NOT STARTED]
-  QuizCard.tsx        [NOT STARTED]
-  LevelUpModal.tsx    [NOT STARTED]
+  MessageBubble.tsx   [COMPLETED]
+  XPBar.tsx           [COMPLETED]
+  XPToast.tsx         [COMPLETED]
+  LeaderboardCard.tsx [COMPLETED]
+  QuizCard.tsx        [COMPLETED]
+  LevelUpModal.tsx    [COMPLETED]
 /lib
-  types.ts   -> shared TypeScript interfaces [NOT STARTED]
-  gemini.ts  -> Gemini API client helper [NOT STARTED]
+  types.ts   -> shared TypeScript interfaces [COMPLETED]
+  gemini.ts  -> Gemini API client helper [COMPLETED]
 CONTEXT.md   -> this file
 ```
 
@@ -130,19 +131,19 @@ To be defined in `/lib/types.ts` once chat is built — include `Message`, `User
 
 ## 5. Feature Status Checklist
 
-- [ ] Landing screen (name + level picker, no jargon, big tappable cards)
-- [ ] 1:1 chat UI (WhatsApp-style bubbles)
-- [ ] `/api/chat` Gemini integration returning strict JSON per shape above
-- [ ] Inline correction rendering (strikethrough + green fix + encouraging one-liner)
-- [ ] XP system + animated XP toast + persistent XP bar + streak counter
-- [ ] Level-up full-screen celebratory modal + route to `/group/[level]`
-- [ ] Group chat view UI
-- [ ] AI persona periodic messages (`/api/persona`, timer-based ~15-20s)
-- [ ] Quiz card in group chat (`/api/quiz`, based on past error patterns)
-- [ ] Leaderboard sidebar (user + personas ranked by XP)
-- [ ] First-use onboarding hints (e.g. tooltip first time a correction appears)
-- [ ] Friendly loading states everywhere ("Max is thinking..." not bare spinners)
-- [ ] Visual polish / animations pass
+- [x] Landing screen (name + level picker, no jargon, big tappable cards)
+- [x] 1:1 chat UI (WhatsApp-style bubbles)
+- [x] `/api/chat` Gemini integration returning strict JSON per shape above
+- [x] Inline correction rendering (strikethrough + green fix + encouraging one-liner)
+- [x] XP system + animated XP toast + persistent XP bar + streak counter
+- [x] Level-up full-screen celebratory modal + route to `/group/[level]`
+- [x] Group chat view UI
+- [x] AI persona periodic messages (`/api/persona`, timer-based ~15-20s)
+- [x] Quiz card in group chat (`/api/quiz`, based on past error patterns)
+- [x] Leaderboard sidebar (user + personas ranked by XP)
+- [x] First-use onboarding hints (e.g. tooltip first time a correction appears)
+- [x] Friendly loading states everywhere ("Max is thinking..." not bare spinners)
+- [x] Visual polish / animations pass
 - [ ] Deployed to Vercel
 
 **Build order priority (do not reorder without updating this doc):**
@@ -180,6 +181,7 @@ making sure known gaps are framed intentionally, not discovered live by a judge)
 - No persistent backend — refreshing outside of localStorage state will reset progress.
 - Leaderboard persona scores are designed to look plausible, not derived from a real
   scoring simulation engine.
+- Bypassed remote `next/font/google` fetch during production build by utilizing system sans-serif fonts in offline/sandbox environment.
 - (Add more here as they come up during the build.)
 
 ---
